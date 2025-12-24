@@ -1,0 +1,21 @@
+-- Create Database
+CREATE DATABASE IF NOT EXISTS rental_db;
+USE rental_db;
+
+-- Users Table
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('tenant', 'owner', 'admin') NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  refresh_token TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Insert Predefined Admin
+INSERT INTO users (name, email, password, role) VALUES
+('Admin User', 'admin@example.com', '$2b$10$8xVlz7L8h6f5wK9qQ2b3.uL9YzX1W4R5T6Y7U8I9O0P1A2B3C4D5E', 'admin');
+-- Password: admin123
