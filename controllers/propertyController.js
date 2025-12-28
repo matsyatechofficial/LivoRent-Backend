@@ -23,6 +23,10 @@ const propertyController = {
         limit: parseInt(req.query.limit) || 20,
         offset: parseInt(req.query.offset) || 0
       };
+      // Allow admin to request drafts by passing ?admin=true (only works for admin role)
+      if (req.user && req.user.role === 'admin' && req.query.admin === 'true') {
+        filters.adminView = true;
+      }
 
       // ✅ Use findAllWithCount to get both data and total count correctly
       const { properties, total } = await Property.findAllWithCount(filters);
@@ -221,7 +225,123 @@ update: async (req, res) => {
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
-  }
+  },
+
+  // Publish property (Admin/Owner)
+  publish: async (req, res) => {
+    try {
+      const property = await Property.findById(req.params.id);
+
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+
+      if (property.owner_id !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      await Property.update(req.params.id, { status: 1 });
+
+      res.json({ message: 'Property published successfully' });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  // Update property status
+  updateStatus: async (req, res) => {
+    try {
+      const { status } = req.body;
+      const property = await Property.findById(req.params.id);
+
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+
+      if (property.owner_id !== req.user.id && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Not authorized' });
+      }
+
+      if (![0, 1].includes(Number(status))) {
+        return res.status(400).json({ message: 'Invalid status. Use 0 (Draft) or 1 (Active)' });
+      }
+
+      await Property.update(req.params.id, { status: Number(status) });
+
+      res.json({
+        message: `Property status updated to ${status === 1 ? 'Active' : 'Draft'}`,
+        status: Number(status)
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  // Get deleted properties (Admin only)
+  getDeleted: async (req, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admin can view deleted properties' });
+      }
+
+      const filters = {
+        city: req.query.city,
+        limit: parseInt(req.query.limit) || 20,
+        offset: parseInt(req.query.offset) || 0
+      };
+
+      const { properties, total } = await Property.findDeleted(filters);
+      res.json({ properties, total });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  // Restore deleted property (Admin only)
+  restore: async (req, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admin can restore properties' });
+      }
+
+      const property = await Property.findById(req.params.id);
+
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+
+      if (!property.deleted_at) {
+        return res.status(400).json({ message: 'Property is not deleted' });
+      }
+
+      await Property.restore(req.params.id);
+
+      res.json({ message: 'Property restored successfully' });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  // Delete permanently (hard delete - admin only)
+  deletePermanently: async (req, res) => {
+    try {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Only admin can permanently delete properties' });
+      }
+
+      const property = await Property.findById(req.params.id);
+
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+
+      await Property.hardDelete(req.params.id);
+
+      res.json({ message: 'Property permanently deleted' });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
 };
 
 // ========================================
@@ -306,30 +426,36 @@ const bookingController = {
       res.status(500).json({ message: error.message });
     }
   },
-
-  // Get single booking
-  getById: async (req, res) => {
-    try {
-      const booking = await Booking.findById(req.params.id);
-
-      if (!booking) {
-        return res.status(404).json({ message: 'Booking not found' });
-      }
-
-      // Check authorization
-      if (
-        booking.tenant_id !== req.user.id &&
-        booking.owner_id !== req.user.id &&
-        req.user.role !== 'admin'
-      ) {
-        return res.status(403).json({ message: 'Not authorized' });
-      }
-
-      res.json({ booking });
-    } catch (error) {
-      res.status(500).json({ message: error.message });
+getById: async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
     }
-  },
+    
+    // Check authorization
+    if (req.user.role === 'tenant' && booking.tenant_id !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    if (req.user.role === 'owner' && booking.owner_id !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    
+    // Hide owner contact details if payment not verified
+    if (req.user.role === 'tenant' && booking.payment_status !== 'paid') {
+      delete booking.owner_email;
+      delete booking.owner_phone;
+    }
+    
+    res.json({ success: true, booking });
+  } catch (error) {
+    console.error('Get booking error:', error);
+    res.status(500).json({ message: 'Failed to get booking' });
+  }
+},
+  
 
   // Update booking status (Owner only)
   updateStatus: async (req, res) => {

@@ -1,3 +1,6 @@
+// backend/server.js
+// UPDATE YOUR EXISTING FILE - ADD THE HIGHLIGHTED LINES
+
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -11,6 +14,8 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const wishlistRoutes = require('./routes/wishlistRoutes');
 const userRoutes = require('./routes/userRoutes');
 const mapsRoutes = require('./routes/mapsRoutes');
+const paymentRouter = require('./routes/paymentRoutes');
+const routingRouter = require('./routes/routingRoutes'); // ← ADD THIS LINE
 
 const { PORT } = require('./config/env');
 
@@ -41,6 +46,8 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/maps', mapsRoutes);
+app.use('/api/payments', paymentRouter);
+app.use('/api/routing', routingRouter); // ← ADD THIS LINE
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -53,7 +60,9 @@ app.get('/api/health', (req, res) => {
       bookings: '/api/bookings',
       wishlist: '/api/wishlist',
       users: '/api/users',
-      maps: '/api/maps'
+      maps: '/api/maps',
+      payments: '/api/payments',
+      routing: '/api/routing' // ← ADD THIS LINE
     }
   });
 });
@@ -89,5 +98,8 @@ app.listen(PORT, () => {
    • Bookings:   /api/bookings
    • Wishlist:   /api/wishlist
    • Users:      /api/users
+   • Maps:       /api/maps
+   • Payments:   /api/payments
+   • Routing:    /api/routing  ← NEW
   `);
 });

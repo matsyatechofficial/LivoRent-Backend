@@ -66,6 +66,9 @@ CREATE TABLE properties (
     avg_rating DECIMAL(3,2) DEFAULT 0,
     total_reviews INT DEFAULT 0,
     view_count INT DEFAULT 0,
+    status TINYINT DEFAULT 1,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    deleted_by INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE

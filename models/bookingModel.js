@@ -22,23 +22,22 @@ const Booking = {
     return result.insertId;
   },
 
-  // Find booking by ID
   findById: async (id) => {
-    const [rows] = await db.query(
-      `SELECT b.*, 
-        p.title as property_title, p.address as property_address,
-        p.primary_image, p.price as property_price,
-        t.name as tenant_name, t.email as tenant_email, t.phone as tenant_phone,
-        o.name as owner_name, o.email as owner_email, o.phone as owner_phone
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      JOIN users t ON b.tenant_id = t.id
-      JOIN users o ON b.owner_id = o.id
-      WHERE b.id = ?`,
-      [id]
-    );
-    return rows[0];
-  },
+  const [rows] = await db.query(
+    `SELECT b.*, 
+      p.title as property_title, p.address as property_address,
+      p.primary_image, p.price as property_price,
+      t.name as tenant_name, t.email as tenant_email, t.phone as tenant_phone,
+      o.name as owner_name, o.email as owner_email, o.phone as owner_phone
+    FROM bookings b
+    JOIN properties p ON b.property_id = p.id
+    JOIN users t ON b.tenant_id = t.id
+    JOIN users o ON b.owner_id = o.id
+    WHERE b.id = ?`,
+    [id]
+  );
+  return rows[0];
+},
 
   // Get bookings by tenant
   findByTenant: async (tenantId) => {
