@@ -16,7 +16,7 @@ const userRoutes = require('./routes/userRoutes');
 const mapsRoutes = require('./routes/mapsRoutes');
 const paymentRouter = require('./routes/paymentRoutes');
 const routingRouter = require('./routes/routingRoutes'); // ← ADD THIS LINE
-
+const otpRoutes = require('./routes/otpRoutes');
 const { PORT } = require('./config/env');
 
 const app = express();
@@ -48,6 +48,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/maps', mapsRoutes);
 app.use('/api/payments', paymentRouter);
 app.use('/api/routing', routingRouter); // ← ADD THIS LINE
+app.use('/api/otp', otpRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -62,7 +63,8 @@ app.get('/api/health', (req, res) => {
       users: '/api/users',
       maps: '/api/maps',
       payments: '/api/payments',
-      routing: '/api/routing' // ← ADD THIS LINE
+      routing: '/api/routing', // ← ADD THIS LINE,
+      otp: '/api/otp' // ← ADD THIS LINE
     }
   });
 });

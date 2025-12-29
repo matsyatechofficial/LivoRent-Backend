@@ -40,17 +40,18 @@ router.post("/send-otp", (req, res) => {
     });
   }
 
-  // 🔢 REQUEST COUNT
+  // 🔢 REQUEST COUNT — after 3 attempts, block for 10 minutes
   user.requestCount = (user.requestCount || 0) + 1;
 
-  if (user.requestCount > 5) {
-    user.blockedUntil = now + 10 * 60 * 1000;
-    user.requestCount = 0;
+  if (user.requestCount >= 3) {
+    user.blockedUntil = now + 10 * 60 * 1000; // block 10 minutes
+    user.requestCount = 0; // reset counter after blocking
     otpStore[email] = user;
 
+    console.warn(`OTP blocked for ${email} until ${new Date(user.blockedUntil).toISOString()}`);
+
     return res.status(429).json({
-      error:
-        "Please wait 10 minutes. Too many OTP requests or failed attempts.",
+      error: "Too many OTP requests. Please wait 10 minutes before trying again.",
     });
   }
 
@@ -63,19 +64,28 @@ router.post("/send-otp", (req, res) => {
 
   otpStore[email] = user;
 
+  const fromEmail = process.env.BREVO_FROM_EMAIL || '<noreply@livorent.com>';
   const mailOptions = {
-    from: '"LivoRent" livorent@gmail.com',
+    from: `"LivoRent" <${fromEmail}>`,
     to: email,
     subject: "Your LivoRent Verification Code",
     html: otpEmailTemplate(otp, name || "User"),
   };
 
-  transporter.sendMail(mailOptions, (err) => {
-    if (err)
+  transporter.sendMail(mailOptions, (err, info) => {
+    if (err) {
+      console.error('OTP Email Error:', err);
       return res
         .status(500)
         .json({ success: false, error: err.message });
+    }
 
+    console.log('OTP sent successfully:', {
+      to: email,
+      otp: otp,
+      from: fromEmail,
+      messageId: info?.messageId
+    });
     res.json({ success: true, message: "OTP sent successfully" });
   });
 });
@@ -98,6 +108,7 @@ router.post("/verify-otp", (req, res) => {
       .json({ success: false, error: "No OTP sent for this email" });
 
   if (Date.now() > record.expiresAt) {
+    // clear record and reset counters on expiry
     delete otpStore[email];
     return res
       .status(400)
@@ -110,7 +121,12 @@ router.post("/verify-otp", (req, res) => {
       .json({ success: false, error: "Invalid OTP" });
   }
 
-  delete otpStore[email];
+  // successful verification — clear stored OTP and reset any counters
+  if (otpStore[email]) {
+    delete otpStore[email];
+    console.log(`OTP verified for ${email} — cleared stored data`);
+  }
+
   res.json({ success: true, message: "Email verified successfully!" });
 });
 
